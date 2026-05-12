@@ -1,6 +1,0 @@
-@echo off 
-set TELEGRAM_BOT_TOKEN=8674688344:AAGAU5KLggKHQ-ihy060hLE2mi4lY8k27Qg
-set GOOGLE_CREDENTIALS_PATH=credentials.json
-set GOOGLE_SHEET_ID=1wxDmqncnPfS3vfyU2R3K5_F9G4OPjwtRtOz-lJyEGk4
-set SHEET_NAME=Expenses
-python bot.py
