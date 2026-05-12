@@ -1,12 +1,13 @@
 """
 Google Sheets integration for the Expense Tracker Bot.
-Handles reading and writing expense data to a Google Sheet.
+- On Railway: reads credentials from GOOGLE_CREDENTIALS_JSON env variable
+- On local PC: reads credentials from credentials.json file
+Both work automatically with no changes needed!
 """
 
 import os
-
+import json
 import logging
-from datetime import datetime
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -14,7 +15,6 @@ from googleapiclient.errors import HttpError
 logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-
 HEADERS = ["Date", "Time", "Description", "Amount (ETB)", "Category", "Logged By"]
 
 
@@ -26,9 +26,23 @@ class SheetsManager:
         self._ensure_headers()
 
     def _authenticate(self):
-        """Authenticate using service account credentials."""
-        creds_path = os.environ.get("GOOGLE_CREDENTIALS_PATH", "credentials.json")
-        creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+        """
+        Authenticate using service account credentials.
+        - Railway: reads from GOOGLE_CREDENTIALS_JSON environment variable
+        - Local PC: reads from credentials.json file
+        """
+        # Railway mode: credentials stored as environment variable
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+        if creds_json:
+            logger.info("Using credentials from environment variable (Railway)")
+            creds_info = json.loads(creds_json)
+            creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+        else:
+            # Local PC mode: credentials stored as file
+            creds_path = os.environ.get("GOOGLE_CREDENTIALS_PATH", "credentials.json")
+            logger.info(f"Using credentials from file (Local PC): {creds_path}")
+            creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+
         return build("sheets", "v4", credentials=creds)
 
     def _ensure_headers(self):
@@ -83,14 +97,12 @@ class SheetsManager:
             if not rows or len(rows) < 2:
                 return []
 
-            # Skip header row
             expenses = []
             for row in rows[1:]:
                 if len(row) < 4:
                     continue
 
                 row_date = row[0] if len(row) > 0 else ""
-                # Filter by date range
                 if start_date <= row_date <= end_date:
                     try:
                         expenses.append({
